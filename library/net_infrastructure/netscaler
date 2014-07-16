@@ -119,6 +119,22 @@ class netscaler(object):
         return resp
 
     def prepare_request(self, action):
+
+        if(self._resolve_primary):
+            # Take a little side trip here - if we're running against a netscaler HA
+            # cluster, ask it for the address of the primary node, as making changes
+            # to the secondary will have no effect. Then use the new address (it may
+            # be the same) as the new _nsc_host value
+            ha_dict = self.http_request(
+                'config',
+                {
+                    "hanode"
+                }
+            )
+
+            primary = ha_dict['primary']['hostname']
+            self._nsc_host = primary
+        
         resp = self.http_request(
             'config',
             {
@@ -141,6 +157,7 @@ def core(module):
     n._nsc_protocol = module.params.get('nsc_protocol')
     n._name = module.params.get('name')
     n._type = module.params.get('type')
+    n._resolve_primary = module.params.get('resolve_primary')
     action = module.params.get('action')
 
     r = n.prepare_request(action)
